@@ -13,7 +13,7 @@ contract DIDProrotype is Ownable {
         mapping(string => bytes32) hashedAttributes;
     }
 
-    mapping(address => DID) public userDID;
+    mapping(address => DID) userDID;
     string[] globalAttributeList;
 
     event UserBlocked(address user, uint256 blockedAtTimestamp);
@@ -139,6 +139,7 @@ contract DIDProrotype is Ownable {
     function getUserDID(address wallet)
         external
         view
+        ifUserExist(wallet)
         returns (address, string memory, uint256, uint256, bool, Attrs[] memory)
     {
         return (
@@ -156,7 +157,7 @@ contract DIDProrotype is Ownable {
         bytes32 attrHash;
     }
 
-    function getDIDattrs(address wallet) public view returns (Attrs[] memory) {
+    function getDIDattrs(address wallet) public view ifUserExist(wallet) returns (Attrs[] memory) {
         string[] memory globList = globalAttributeList;
         uint256 counter = 0;
         for (uint256 i = 0; i < globList.length; i++) {
@@ -175,6 +176,15 @@ contract DIDProrotype is Ownable {
         }
 
         return response;
+    }
+
+    function getHashedAttribute(address user, string calldata attributeName)
+        external
+        view
+        ifUserExist(user)
+        returns (bytes32)
+    {
+        return userDID[user].hashedAttributes[attributeName];
     }
 
     function _updateDID(address _userWallet, string calldata _userDID, uint256 _validTo, bool _blocked) internal {
