@@ -21,7 +21,7 @@ contract DIDValidator is Ownable {
     DIDProrotype DID;
 
     string[] private attributesMustHave; // "InvestorType", "Country" ...
-    mapping(string attributeName => bytes4 functionSelector) attributeAction; // function which will make validation of the specific attribute
+    mapping(string => bytes4) attributeAction; // function which will make validation of the specific attribute
 
     string[] private allowedCountries;
 
@@ -104,10 +104,11 @@ contract DIDValidator is Ownable {
     function _checkUserAttributes(address user) internal returns (bool success) {
         for (uint256 i = 0; i < attributesMustHave.length; i++) {
             (success,) = address(this).call(
-                abi.encodePacked(
+                abi.encodeWithSelector(
                     attributeAction[attributesMustHave[i]], user, DID.getHashedAttribute(user, attributesMustHave[i])
                 )
             );
+            require(success, AttributeNotValid(attributesMustHave[i]));
         }
     }
 

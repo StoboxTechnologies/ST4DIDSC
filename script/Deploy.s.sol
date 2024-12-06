@@ -15,10 +15,11 @@ contract DeployDIDandValidatorScript is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        DIDProrotype dIDProrotype = new DIDProrotype();
-        console.log("DIDProrotype is deployed to", address(dIDProrotype));
+        //DIDProrotype dIDProrotype = new DIDProrotype();
+        //console.log("DIDProrotype is deployed to", address(dIDProrotype));
 
-        DIDValidator dIDValidator = new DIDValidator(address(dIDProrotype), allowedCountries);
+        DIDValidator dIDValidator =
+            new DIDValidator(address(0xbEe617dD97739304eA936d643Fc24106e64D3EEb), allowedCountries);
         console.log("DIDValidator is deployed to", address(dIDValidator));
 
         vm.stopBroadcast();
