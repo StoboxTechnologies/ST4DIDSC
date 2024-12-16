@@ -6,7 +6,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 contract DIDProrotype is Ownable {
     struct DID {
         address userWallet;
-        string userDID; // userDID => hash ?????
         uint256 validTo;
         uint256 updatedAt;
         bool blocked;
@@ -18,8 +17,9 @@ contract DIDProrotype is Ownable {
 
     event UserBlocked(address user, uint256 blockedAtTimestamp);
     event UserUnblocked(address user, uint256 blockedAtTimestamp);
+    event UserDIDUpdated(address user, string descriptionOfChanges);
+    event UserDIDUpdated(address user, string descriptionOfChanges, string data);
     event UserDIDUpdated(address user, string descriptionOfChanges, uint256 paramChanged);
-    event UserDIDUpdated(address user, string descriptionOfChanges, string paramChanged);
     event UserDIDUpdated(address user, string descriptionOfChanges, string[] paramChanged);
     event GlobalAttributeListUpdated(string action, string attributeName);
 
@@ -41,7 +41,7 @@ contract DIDProrotype is Ownable {
 
     constructor() Ownable(msg.sender) {}
 
-    function updateOrCreateDID(address _userWallet, string calldata _userDID, uint256 _validTo, bool _blocked)
+    function updateOrCreateDID(address _userWallet, uint256 _validTo, bool _blocked)
         external
         onlyOwner
         updatedNow(_userWallet)
@@ -50,13 +50,12 @@ contract DIDProrotype is Ownable {
             DID storage did = userDID[_userWallet];
 
             did.userWallet = _userWallet;
-            did.userDID = _userDID;
             did.validTo = _validTo;
             did.blocked = _blocked;
 
-            emit UserDIDUpdated(_userWallet, "DID created", _userDID);
+            emit UserDIDUpdated(_userWallet, "DID created");
         } else {
-            _updateDID(_userWallet, _userDID, _validTo, _blocked);
+            _updateDID(_userWallet, _validTo, _blocked);
         }
     }
 
@@ -136,46 +135,8 @@ contract DIDProrotype is Ownable {
         return globalAttributeList;
     }
 
-    function getUserDID(address wallet)
-        external
-        view
-        ifUserExist(wallet)
-        returns (address, string memory, uint256, uint256, bool, Attrs[] memory)
-    {
-        return (
-            userDID[wallet].userWallet,
-            userDID[wallet].userDID,
-            userDID[wallet].validTo,
-            userDID[wallet].updatedAt,
-            userDID[wallet].blocked,
-            getDIDattrs(wallet)
-        );
-    }
-
-    struct Attrs {
-        string attrName;
-        bytes32 attrHash;
-    }
-
-    function getDIDattrs(address wallet) public view ifUserExist(wallet) returns (Attrs[] memory) {
-        string[] memory globList = globalAttributeList;
-        uint256 counter = 0;
-        for (uint256 i = 0; i < globList.length; i++) {
-            if (userDID[wallet].hashedAttributes[globList[i]] != bytes32(0)) {
-                counter++;
-            }
-        }
-
-        Attrs[] memory response = new Attrs[](counter);
-        uint256 k = 0;
-        for (uint256 j = 0; j < globList.length; j++) {
-            if (userDID[wallet].hashedAttributes[globList[j]] != bytes32(0)) {
-                response[k] = Attrs({attrName: globList[j], attrHash: userDID[wallet].hashedAttributes[globList[j]]});
-                k++;
-            }
-        }
-
-        return response;
+    function getUserDID(address wallet) external view ifUserExist(wallet) returns (address, uint256, uint256, bool) {
+        return (userDID[wallet].userWallet, userDID[wallet].validTo, userDID[wallet].updatedAt, userDID[wallet].blocked);
     }
 
     function getHashedAttribute(address user, string calldata attributeName)
@@ -187,14 +148,13 @@ contract DIDProrotype is Ownable {
         return userDID[user].hashedAttributes[attributeName];
     }
 
-    function _updateDID(address _userWallet, string calldata _userDID, uint256 _validTo, bool _blocked) internal {
+    function _updateDID(address _userWallet, uint256 _validTo, bool _blocked) internal {
         userDID[_userWallet].userWallet = _userWallet;
-        userDID[_userWallet].userDID = _userDID;
         userDID[_userWallet].validTo = _validTo;
         userDID[_userWallet].updatedAt = block.timestamp;
         userDID[_userWallet].blocked = _blocked;
 
-        emit UserDIDUpdated(_userWallet, "DID all parameters updated", _userDID);
+        emit UserDIDUpdated(_userWallet, "DID all parameters updated");
     }
 
     function _existsInGlobal(string memory element) internal view returns (bool inGlobal) {
