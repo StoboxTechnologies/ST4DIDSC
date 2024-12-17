@@ -3,7 +3,7 @@ pragma solidity 0.8.26;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract DIDProrotype is Ownable {
+contract DIDPrototype is Ownable {
     struct DID {
         address userWallet;
         uint256 validTo;
