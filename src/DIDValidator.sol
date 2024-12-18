@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 interface DIDProrotype {
-    function getUserDID(address wallet) external view returns (address, string memory, uint256, uint256, bool);
+    function getUserDID(address wallet) external view returns (address, uint256, uint256, bool);
     function getHashedAttribute(address wallet, string calldata attributeName) external view returns (bytes32);
 }
 
@@ -12,7 +12,9 @@ contract DIDValidator is Ownable {
     DIDProrotype DID;
 
     string[] private attributesMustHave; // "Country" ...
-    mapping(string => bytes4) attributeAction; // function which will make validation of the specific attribute
+    // function which will make validation of the specific attribute,
+    // 0x7c1d66f0 - selector for chekCountry
+    mapping(string => bytes4) attributeAction;
 
     string[] private allowedCountries;
 
@@ -75,7 +77,7 @@ contract DIDValidator is Ownable {
         return allowedCountries;
     }
 
-    function checkCountry(address user, bytes32 userAttributeHash) external view {
+    function checkCountry(address user, bytes32 userAttributeHash) external view returns (bool) {
         string[] memory countryList = allowedCountries;
         uint256 counter = 0;
         for (uint256 i = 0; i < countryList.length; i++) {
@@ -86,6 +88,7 @@ contract DIDValidator is Ownable {
         }
 
         require(counter > 0, AttributeNotValid("Country"));
+        return true;
     }
 
     function _checkUserAttributes(address user) internal returns (bool success) {
@@ -100,7 +103,7 @@ contract DIDValidator is Ownable {
     }
 
     function _validDID(address user) internal view {
-        (,, uint256 validTo,, bool blocked) = DID.getUserDID(user);
+        (, uint256 validTo,, bool blocked) = DID.getUserDID(user);
         require(validTo > block.timestamp && !blocked, UserDIDNotValid());
     }
 
