@@ -1,6 +1,28 @@
 # DID Hook & DID Prototype Smart Contracts
 
-This repository contains two Solidity smart contracts: `DIDHook` and `DIDPrototype`. These contracts are designed to integrate with decentralized finance (DeFi) protocols, providing a decentralized identity (DID) system. The `DIDHook` contract is used to verify the user before performing actions like adding liquidity, removing liquidity, swapping, and donating. The `DIDPrototype` contract is a decentralized identity (DID) management contract, allowing the creation, modification, and management of users' DIDs, attributes, and blocklist statuses.
+This repository contains three Solidity smart contracts: `DIDHook`, `DIDPrototype`and `DIDValidator`. These contracts are designed to integrate with decentralized finance (DeFi) protocols, providing a decentralized identity (DID) system. The `DIDHook` contract is used to verify the user before performing actions like adding liquidity, removing liquidity, swapping, and donating. The `DIDPrototype` contract is a decentralized identity (DID) management contract, allowing the creation, modification, and management of users' DIDs, attributes, and blocklist statuses. The `DIDValidator` contract ensures that user DIDs are valid and that specific attributes meet predefined criteria. It works in tandem with the DIDPrototype contract to validate user data and enforce system rules.
+
+### **Test Smart Contracts. Arbitrum Sepolia Testnet**
+[DIDPrototype](https://sepolia.arbiscan.io/address/0xd0586379734431a34b09b50396cb35ee956b8ccd#code) 0xD0586379734431A34b09b50396cb35Ee956b8CCD
+
+[DIDValidator](https://sepolia.arbiscan.io/address/0x4aa5ec1e40d621278a5d875fab943cfa1b2efb7a#code) 0x4AA5EC1E40D621278A5D875fAb943CFA1b2eFB7a
+
+```
+/project-root
+│
+├── /src
+│   ├── DIDHook.sol
+│   ├── DIDPrototype.sol
+│   └── DIDValidator.sol
+│
+├── /script
+│   └── Deploy.s.sol
+│        └── DeployDIDandValidatorScript.sol
+│
+├── remappings.txt
+├── .env.example
+└── foundry.toml
+```
 
 ## Contracts
 
@@ -83,125 +105,100 @@ The `DIDPrototype` contract enables creating, updating, and managing decentraliz
 - `updatedNow`: Updates the `updatedAt` timestamp for the user when modifying their DID.
 
 ---
+### 3. `DIDValidator`
 
-## Installation
+The `DIDValidator` contract ensures that user DIDs are valid and that specific attributes meet predefined criteria. It works in tandem with the `DIDPrototype` contract to validate user data and enforce system rules.
 
-1. Clone this repository:
+#### Key Features
 
-   ```bash
-   git clone https://github.com/your-repository/did-smart-contracts.git
-   cd did-smart-contracts
-   ```
+- Validate a user’s DID by checking its validity period, blocked status, and required attributes.
+- Define required attributes that all users must have to pass validation.
+- Dynamically assign validation logic to specific attributes using function selectors.
+- Support for restricting users based on allowed countries.
+- Update, remove, or reset the list of required attributes and allowed countries.
 
-2. Install the dependencies (if any):
+#### Functions
 
-   ```bash
-   npm install
-   ```
+- **Validation:**
+  - `validateUser`: Validates a user's DID and required attributes.
+  - `_validDID`: Internal function to ensure the user's DID is valid and not blocked.
+  - `_checkUserAttributes`: Internal function to validate required attributes using their associated actions.
 
-3. Deploy the contracts using your preferred method (Truffle, Hardhat, etc.) and configure it for the Ethereum network or any other supported network.
+- **Attribute Management:**
+  - `addAttribute`: Adds a new required attribute with a custom validation function selector.
+  - `deleteAttribute`: Removes a specific required attribute.
+  - `resetAllAttributes`: Clears all required attributes from the system.
+  - `getAttributesMustHave`: Fetches the list of all required attributes.
 
----
+- **Country Restriction:**
+  - `checkCountry`: Verifies if a user's attribute (e.g., "Country") matches the allowed list.
+  - `getAllowedCountries`: Retrieves the list of allowed countries.
 
-## Usage
-
-### DIDHook Contract
-
-The `DIDHook` contract is typically used by a pool manager (e.g., a decentralized exchange) to validate users' DIDs before performing key actions. To deploy the contract, specify the following parameters:
-
-- `IPoolManager _manager`: The address of the pool manager (e.g., the DEX contract).
-- `address _validatorContract`: The address of the external DID validator contract.
-
-### DIDPrototype Contract
-
-The `DIDPrototype` contract allows for the management of user DIDs. It provides functions to create, update, block, unblock users, and manage their attributes.
-
----
-
-## Events
-
-- `UserBlocked`: Emitted when a user is blocked.
-- `UserUnblocked`: Emitted when a user is unblocked.
-- `UserDIDUpdated`: Emitted when a user's DID is created or updated.
-- `GlobalAttributeListUpdated`: Emitted when a global attribute is added or removed.
+- **Utilities:**
+  - `_existsInMustHave`: Internal function to check if an attribute exists in the required list.
+  - `_getHash`: Computes the hash of a user's wallet and attribute name.
+  - `_ifEqual`: Compares two strings for equality.
 
 ---
 
-## Security Considerations
+### Events
 
-- Ensure that the `DIDPrototype` contract is only interacted with by trusted parties (the owner), as sensitive operations like blocking users or adding attributes are restricted to the owner.
-- When using the `DIDHook` contract, make sure that the validator contract is secure and properly handles user validation.
+- `AttributesMustHaveUpdated`: Emitted when a required attribute is added, removed, or reset.
+
+---
+
+### Errors
+
+- `AttributeAlreadyExists`: Thrown when trying to add an attribute that already exists in the required list.
+- `UserDIDNotValid`: Thrown when a user’s DID is invalid or blocked.
+- `AttributeNotValid`: Thrown when a specific attribute fails validation.
 
 ---
 
-## Foundry
+### Modifiers
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+- **None:** The contract relies on `onlyOwner` from OpenZeppelin's `Ownable` for owner-restricted actions.
 
 ---
+
+### Validation Workflow
+
+1. A user’s DID is fetched using the `DIDPrototype` interface.
+2. The contract verifies that the DID is not expired and the user is not blocked.
+3. Each required attribute is validated using its associated custom logic, defined by function selectors.
+4. Attributes like "Country" are further validated against a list of allowed values.
+
+This contract provides a modular and flexible approach to enforcing rules and validating user identities in decentralized systems.
+
+---
+
+## Installation Steps
+
+1. Clone the repository:
+```
+git clone git@github.com:StoboxTechnologies/ST4DIDSC.git
+```
+2. Install dependencies:
+```
+forge install
+```
+3. Set Environment Variables: You need to set up the necessary environment variables in the `.env` file. A sample `.env.example` file is provided in this repository. Fill in the required values for the following variables:
+```
+   - `PRIVATE_KEY`: Your private key for the deployer's wallet.
+   - `ARB_SEPOLIA_RPC_URL`: RPC URL for the Arbitrum Sepolia network.
+   - `ARBISCAN_API_KEY`: API key for interacting with the blockchain explorer.
+```
+4. Compile the contracts:
+```
+forge build
+```
+5. Deploy the contract (we use Arbitrum Sepolia):
+```
+source .env
+```
+```
+forge script --chain 421614 script/Deploy.s.sol:DeployDIDandValidatorScript --rpc-url $ARB_SEPOLIA_RPC_URL --etherscan-api-key $ARBISCAN_API_KEY --broadcast --verify -vvvv
+```
 
 ## License
 
