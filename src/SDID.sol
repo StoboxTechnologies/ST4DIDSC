@@ -37,6 +37,7 @@ contract SDID is AccessControlEnumerable {
     bytes32 public constant WRITER_ROLE = keccak256("WRITER_ROLE");
     bytes32 public constant ATTRIBUTE_READER_ROLE = keccak256("ATTRIBUTE_READER_ROLE");
 
+    //!!!!!!!!!!!!! TBD !!!!!!!!!!!!!! indexed param is saved like hash
     event DIDCreated(string indexed UUID, address indexed createdBy);
     event DIDAddressesUpdated(string indexed UUID, address updatedBy);
     event DIDValidDataUpdated(
@@ -60,6 +61,12 @@ contract SDID is AccessControlEnumerable {
         _;
     }
 
+    modifier canCreateDID(address addrToCheck) {
+        require(addrToCheck != address(0), ZeroAddressNotAllowed());
+        require(_empty(linker[addrToCheck].UUID), AddressAlredyLinkedToDID());
+        _;
+    }
+
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
@@ -67,33 +74,37 @@ contract SDID is AccessControlEnumerable {
     function createDID(string calldata uUID, address _userWallet, uint256 _validToDate, bool _blocked)
         external
         onlyRole(WRITER_ROLE)
+        canCreateDID(_userWallet)
     {
         DID storage did = userDID[uUID];
-
         require(did.updatedAt == 0, DIDAlreadyExists());
 
         did.UUID = uUID;
         did.validTo = _validTo(_validToDate);
         did.blocked = _blocked;
+
+        Linker storage link = linker[_userWallet];
+
+        link.UUID = uUID;
+        link.linkedAddresses.push(_userWallet);
+        emit DIDAddressesUpdated(uUID, msg.sender);
+
         _updatedNow(did, msg.sender);
 
         emit DIDCreated(uUID, msg.sender);
-
-        _linkAddressToDID(_userWallet, _userWallet);
     }
 
     function linkAddressToDID(string calldata uUID, address existingDIDAddress, address addressToLink)
         external
         dIDExsists(uUID)
+        canCreateDID(addressToLink)
     {
         //!!!!!!!!!!!!! TBD !!!!!!!!!!!!!! user can???
         require(
             hasRole(WRITER_ROLE, msg.sender) || _equal(linker[msg.sender].UUID, uUID), NotAuthorizedForThisTransaction()
         );
 
-        require(existingDIDAddress != address(0) && addressToLink != address(0), ZeroAddressNotAllowed());
         require(_equal(linker[existingDIDAddress].UUID, uUID), WrongDIDToUpdate());
-        require(_empty(linker[addressToLink].UUID), AddressAlredyLinkedToDID());
 
         _linkAddressToDID(existingDIDAddress, addressToLink);
         _updatedNow(userDID[linker[addressToLink].UUID], msg.sender);
@@ -148,6 +159,7 @@ contract SDID is AccessControlEnumerable {
         Linker storage link = linker[addrOld];
 
         link.linkedAddresses.push(addrNew);
+        linker[addrNew].UUID = link.UUID;
 
         for (uint256 i = 0; i < link.linkedAddresses.length; i++) {
             if (link.linkedAddresses[i] != addrOld) {
