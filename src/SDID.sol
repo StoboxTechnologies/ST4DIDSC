@@ -37,14 +37,18 @@ contract SDID is AccessControlEnumerable {
     bytes32 public constant WRITER_ROLE = keccak256("WRITER_ROLE");
     bytes32 public constant ATTRIBUTE_READER_ROLE = keccak256("ATTRIBUTE_READER_ROLE");
 
-    //!!!!!!!!!!!!! TBD !!!!!!!!!!!!!! indexed param is saved like hash
+    //!!!!!!!!!!!!! TBD !!!!!!!!!!!!!! indexed param string is saved like hash
     event DIDCreated(string indexed UUID, address indexed createdBy);
     event DIDAddressesUpdated(string indexed UUID, address updatedBy);
     event DIDValidDataUpdated(
         string indexed UUID, uint256 oldValidTo, uint256 indexed newValidTo, address indexed updatedBy
     );
     event DIDBlockStatusUpdated(string indexed UUID, bool indexed blocked, address indexed updatedBy);
+    event AttributeCreated(string indexed UUID, string indexed attributeName, address indexed createdBy);
+    event AttributeUpdated(string indexed UUID, string indexed attributeName, address indexed updatedBy);
+    event AttributeDeactivated(string indexed UUID, string indexed attributeName, address indexed deactivatedBy);
 
+    //!!!!!!!!!!!!! TBD !!!!!!!!!!!!!! all errors without parameters - maybe have to add any?
     error CantRevokeLastSuperAdmin();
     error DIDAlreadyExists();
     error DIDDoesNotExist();
@@ -108,6 +112,50 @@ contract SDID is AccessControlEnumerable {
 
         _linkAddressToDID(existingDIDAddress, addressToLink);
         _updatedNow(userDID[linker[addressToLink].UUID], msg.sender);
+    }
+
+    function addOrUpdateAttributes(
+        string calldata uUID,
+        string calldata attributeName,
+        bytes32 _value,
+        string calldata _valueType, //!!!!!!!!!!!!! TBD !!!!!!!!!!!!!! if this parameter can be changed????
+        uint256 _validToData // if set zero - attribute does not expire (max.uint). Zero can be set ONLY by deactivateDIDAttribute()
+    ) external dIDExsists(uUID) onlyRole(WRITER_ROLE) {
+        Attribute storage attr = userDID[uUID].attributes[attributeName];
+
+        if (attr.createdAt == 0) {
+            attr.value = _value;
+            attr.valueType = _valueType;
+            attr.createdAt = block.timestamp;
+            attr.updatedAt = block.timestamp;
+            attr.validTo = _validTo(_validToData);
+            attr.updatedBy = msg.sender;
+
+            userDID[uUID].attributeList.push(attributeName);
+
+            emit AttributeCreated(uUID, attributeName, msg.sender);
+        } else {
+            attr.value = _value;
+            //attr.valueType = _valueType;
+            attr.updatedAt = block.timestamp;
+            attr.validTo = _validTo(_validToData);
+            attr.updatedBy = msg.sender;
+
+            emit AttributeUpdated(uUID, attributeName, msg.sender);
+        }
+
+        _updatedNow(userDID[uUID], msg.sender);
+    }
+
+    function deactivateDIDAttribute(string calldata uUID, string calldata attributeName)
+        external
+        dIDExsists(uUID)
+        onlyRole(WRITER_ROLE)
+    {
+        userDID[uUID].attributes[attributeName].validTo = 0;
+        emit AttributeDeactivated(uUID, attributeName, msg.sender);
+
+        _updatedNow(userDID[uUID], msg.sender);
     }
 
     function blockDID(string calldata uUID) external dIDExsists(uUID) onlyRole(WRITER_ROLE) returns (bool) {
