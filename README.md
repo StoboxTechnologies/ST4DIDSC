@@ -1,205 +1,136 @@
-# DID Hook & DID Prototype Smart Contracts
+# SDID Smart Contract
 
-This repository contains three Solidity smart contracts: `DIDHook`, `DIDPrototype`and `DIDValidator`. These contracts are designed to integrate with decentralized finance (DeFi) protocols, providing a decentralized identity (DID) system. The `DIDHook` contract is used to verify the user before performing actions like adding liquidity, removing liquidity, swapping, and donating. The `DIDPrototype` contract is a decentralized identity (DID) management contract, allowing the creation, modification, and management of users' DIDs, attributes, and blocklist statuses. The `DIDValidator` contract ensures that user DIDs are valid and that specific attributes meet predefined criteria. It works in tandem with the DIDPrototype contract to validate user data and enforce system rules.
+## Overview
+The **SDID** (Self-Sovereign Decentralized Identity) smart contract is an implementation of a decentralized identity (DID) system on the Ethereum blockchain. It enables users to create, manage, and interact with decentralized identities while providing mechanisms for attribute management, linked addresses, access control, and security.
 
-### **Test Smart Contracts. Arbitrum Sepolia Testnet**
-[DIDPrototype](https://sepolia.arbiscan.io/address/0xd0586379734431a34b09b50396cb35ee956b8ccd#code) 0xD0586379734431A34b09b50396cb35Ee956b8CCD
+## Features
+- **Decentralized Identity (DID) Management**
+  - Create, update, and manage DIDs.
+  - Link multiple addresses to a DID.
+  - Control access to DID attributes.
+  
+- **Attribute Management**
+  - Add, update, and deactivate attributes for a DID.
+  - Set expiration dates for attributes.
 
-[DIDValidator](https://sepolia.arbiscan.io/address/0x4aa5ec1e40d621278a5d875fab943cfa1b2efb7a#code) 0x4AA5EC1E40D621278A5D875fAb943CFA1b2eFB7a
+- **Access Control**
+  - Define roles such as WRITER_ROLE and ATTRIBUTE_READER_ROLE.
+  - Assign external readers with expiration-based access.
 
-```
-/project-root
-│
-├── /src
-│   ├── DIDHook.sol
-│   ├── DIDPrototype.sol
-│   └── DIDValidator.sol
-│
-├── /script
-│   └── Deploy.s.sol
-│        └── DeployDIDandValidatorScript.sol
-│
-├── remappings.txt
-├── .env.example
-└── foundry.toml
-```
+- **Security Features**
+  - DID blocking and unblocking.
+  - Role-based access management.
+  - Limit the number of linked addresses per DID.
 
-## Contracts
+## Smart Contract Details
+### Prerequisites
+- Solidity version: `0.8.26`
+- Uses OpenZeppelin's `AccessControlEnumerable` for role management.
 
-### 1. `DIDHook`
+### Roles
+- **DEFAULT_ADMIN_ROLE**: Full administrative control over the contract.
+- **WRITER_ROLE**: Can create and manage DIDs and attributes.
+- **ATTRIBUTE_READER_ROLE**: Can read attributes of a DID.
 
-The `DIDHook` contract integrates with the pool manager of a decentralized exchange (DEX) or other liquidity-based systems. It validates user identities before allowing certain actions.
-
-#### Key Features
-
-- Verifies a user’s DID (Decentralized Identity) before executing specific actions.
-- Performs checks on user status (e.g., blocked or not) via an external `IDIDValidator` contract.
-- Supports operations like adding/removing liquidity, swapping tokens, and donating.
-
-#### Functions
-
-- `beforeAddLiquidity`: Verifies the user before adding liquidity.
-- `beforeRemoveLiquidity`: Verifies the user before removing liquidity.
-- `beforeSwap`: Verifies the user before performing a token swap.
-- `beforeDonate`: Verifies the user before making a donation to the pool.
-- `getHookPermissions`: Specifies which actions are allowed for the hook.
-
-#### Constructor
-
-The constructor initializes the contract by linking to an external pool manager and DID validator.
-
+## Key Structures
+### `DID`
+Represents a decentralized identity.
 ```solidity
-constructor(IPoolManager _manager, address _validatorContract) BaseHook(_manager)
+struct DID {
+    string UDID; // Unique identifier
+    uint256 validTo; // Expiry timestamp
+    uint256 updatedAt;
+    bool blocked;
+    address lastUpdatedBy;
+    string[] attributeList;
+    mapping(string => Attribute) attributes;
+    mapping(address => uint256) externalReader; // Access control
+}
 ```
 
----
-
-### 2. `DIDPrototype`
-
-The `DIDPrototype` contract enables creating, updating, and managing decentralized identities (DIDs) for users. Each user’s DID is associated with a wallet, validity period, and other user attributes.
-
-#### Key Features
-
-- Create and update a user’s DID with wallet address, validity, and blocked status.
-- Store and manage hashed attributes for users.
-- Block or unblock users based on specific conditions.
-- Add or remove global attributes from the system.
-- Tracks updates on the user’s DID and logs events like DID creation, updates, and block/unblock actions.
-
-#### Functions
-
-- **DID Management:**
-  - `updateOrCreateDID`: Creates or updates the DID of a user.
-  - `updateOrAddDIDAttributeHashes`: Adds or updates hashed attributes for a user.
-  - `deleteUserAttribute`: Deletes a specific attribute for a user.
-  - `setUserValidTo`: Updates the validity period of a user's DID.
-
-- **Blocking and Unblocking:**
-  - `blockUser`: Blocks a user and marks them as blocked in the DID system.
-  - `unblockUser`: Unblocks a previously blocked user.
-
-- **Global Attributes:**
-  - `addGlobalAttribute`: Adds a new global attribute to the system.
-  - `deleteGlobalAttribute`: Deletes an existing global attribute.
-  - `getGlobalAttributes`: Returns the list of global attributes.
-
-- **Query Functions:**
-  - `getUserDID`: Fetches the DID information for a specific user.
-  - `getHashedAttribute`: Retrieves a hashed attribute for a specific user.
-
----
-
-## Errors
-
-- `AttributeAlreadyExists`: Thrown when trying to add an attribute that already exists.
-- `UserDoesntHaveDID`: Thrown when attempting to modify or fetch a DID that doesn’t exist.
-- `ArraysAreNotEqual`: Thrown when the array sizes of attribute names and hashed attributes do not match.
-- `UserIsBlocked`: Thrown when a user is blocked and attempts to perform an action.
-- `UserIsNotBlocked`: Thrown when a user is not blocked and an action is attempted on their block status.
-
----
-
-## Modifiers
-
-- `ifUserExist`: Ensures that the user has a DID before proceeding.
-- `updatedNow`: Updates the `updatedAt` timestamp for the user when modifying their DID.
-
----
-### 3. `DIDValidator`
-
-The `DIDValidator` contract ensures that user DIDs are valid and that specific attributes meet predefined criteria. It works in tandem with the `DIDPrototype` contract to validate user data and enforce system rules.
-
-#### Key Features
-
-- Validate a user’s DID by checking its validity period, blocked status, and required attributes.
-- Define required attributes that all users must have to pass validation.
-- Dynamically assign validation logic to specific attributes using function selectors.
-- Support for restricting users based on allowed countries.
-- Update, remove, or reset the list of required attributes and allowed countries.
-
-#### Functions
-
-- **Validation:**
-  - `validateUser`: Validates a user's DID and required attributes.
-  - `_validDID`: Internal function to ensure the user's DID is valid and not blocked.
-  - `_checkUserAttributes`: Internal function to validate required attributes using their associated actions.
-
-- **Attribute Management:**
-  - `addAttribute`: Adds a new required attribute with a custom validation function selector.
-  - `deleteAttribute`: Removes a specific required attribute.
-  - `resetAllAttributes`: Clears all required attributes from the system.
-  - `getAttributesMustHave`: Fetches the list of all required attributes.
-
-- **Country Restriction:**
-  - `checkCountry`: Verifies if a user's attribute (e.g., "Country") matches the allowed list.
-  - `getAllowedCountries`: Retrieves the list of allowed countries.
-
-- **Utilities:**
-  - `_existsInMustHave`: Internal function to check if an attribute exists in the required list.
-  - `_getHash`: Computes the hash of a user's wallet and attribute name.
-  - `_ifEqual`: Compares two strings for equality.
-
----
-
-### Events
-
-- `AttributesMustHaveUpdated`: Emitted when a required attribute is added, removed, or reset.
-
----
-
-### Errors
-
-- `AttributeAlreadyExists`: Thrown when trying to add an attribute that already exists in the required list.
-- `UserDIDNotValid`: Thrown when a user’s DID is invalid or blocked.
-- `AttributeNotValid`: Thrown when a specific attribute fails validation.
-
----
-
-### Modifiers
-
-- **None:** The contract relies on `onlyOwner` from OpenZeppelin's `Ownable` for owner-restricted actions.
-
----
-
-### Validation Workflow
-
-1. A user’s DID is fetched using the `DIDPrototype` interface.
-2. The contract verifies that the DID is not expired and the user is not blocked.
-3. Each required attribute is validated using its associated custom logic, defined by function selectors.
-4. Attributes like "Country" are further validated against a list of allowed values.
-
-This contract provides a modular and flexible approach to enforcing rules and validating user identities in decentralized systems.
-
----
-
-## Installation Steps
-
-1. Clone the repository:
+### `Attribute`
+Represents an attribute associated with a DID.
+```solidity
+struct Attribute {
+    bytes32 value;
+    string valueType;
+    uint256 createdAt;
+    uint256 updatedAt;
+    uint256 validTo;
+    address lastUpdatedBy;
+}
 ```
-git clone git@github.com:StoboxTechnologies/ST4DIDSC.git
+
+### `Linker`
+Manages address linking to a DID.
+```solidity
+struct Linker {
+    string UDID;
+    uint256 joinDate;
+    uint256 updateDate;
+    bool deactivated;
+    address[] linkedAddresses;
+}
 ```
-2. Install dependencies:
-```
-forge install
-```
-3. Set Environment Variables: You need to set up the necessary environment variables in the `.env` file. A sample `.env.example` file is provided in this repository. Fill in the required values for the following variables:
-```
-   - `PRIVATE_KEY`: Your private key for the deployer's wallet.
-   - `ARB_SEPOLIA_RPC_URL`: RPC URL for the Arbitrum Sepolia network.
-   - `ARBISCAN_API_KEY`: API key for interacting with the blockchain explorer.
-```
-4. Compile the contracts:
-```
-forge build
-```
-5. Deploy the contract (we use Arbitrum Sepolia):
-```
-source .env
-```
-```
-forge script --chain 421614 script/Deploy.s.sol:DeployDIDandValidatorScript --rpc-url $ARB_SEPOLIA_RPC_URL --etherscan-api-key $ARBISCAN_API_KEY --broadcast --verify -vvvv
-```
+
+## Events
+The contract emits events for important actions, including:
+- `DIDCreated`
+- `DIDAddressLinked`
+- `DIDAddressDeleted`
+- `DIDAddressDeactivated`
+- `DIDAddressActivated`
+- `DIDBlockStatusUpdated`
+- `AttributeCreated`
+- `AttributeUpdated`
+- `AttributeDeactivated`
+- `NewExternalReaderAdded`
+- `ExternalReaderDeleted`
+
+## Functions
+### DID Management
+- `createDID(string calldata uDID, address _userWallet, uint256 _validToDate, bool _blocked)`: Creates a new DID.
+- `linkAddressToDID(address existingDIDAddress, address addressToLink)`: Links an address to an existing DID.
+- `blockDID(string memory uDID, string calldata reasonToBlock)`: Blocks a DID.
+- `unBlockDID(string memory uDID, string calldata reasonToUnblock)`: Unblocks a DID.
+
+### Attribute Management
+- `addOrUpdateAttributes(...)`: Adds or updates an attribute.
+- `deactivateDIDAttribute(string memory uDID, string calldata attributeName)`: Deactivates an attribute.
+
+### Access Control
+- `addOrUpdateExternalReader(...)`: Grants external read access.
+- `deleteExternalReader(...)`: Revokes external read access.
+
+### Utility Functions
+- `prolongateDID(...)`: Extends the validity of a DID.
+- `readAttributeList(...)`: Reads the attribute list of a DID.
+- `getUserDID(...)`: Retrieves DID details.
+- `getAttribute(...)`: Fetches an attribute of a DID.
+
+## Error Handling
+The contract includes custom errors for validation and security:
+- `DIDAlreadyExists(string UDID)`
+- `DIDDoesNotExist(string UDID)`
+- `ZeroAddressNotAllowed()`
+- `AddressAlreadyLinkedToDID(address, string)`
+- `NotAuthorizedForThisTransaction(address caller)`
+- `DIDIsBlocked(string UDID)`
+- `DIDIsNotBlocked(string UDID)`
+- `MaxLinkedAddressesExceeded(string UDID, uint256 maxAllowed)`
+- `AddressIsNotExternalReader(string UDID, address)`
+
+## Deployment & Configuration
+1. Deploy the contract on an Ethereum-compatible blockchain.
+2. Assign `DEFAULT_ADMIN_ROLE` to the deploying address.
+3. Grant `WRITER_ROLE` to authorized entities.
+4. Configure `MAX_DID_LINKED_ADDRESSES` as required.
+
+## Security Considerations
+- Ensure WRITER_ROLE is only granted to trusted entities.
+- Regularly audit access roles and external readers.
+- Be cautious when blocking/unblocking DIDs, as it may affect user operations.
 
 ## License
+This project is licensed under the **MIT License**.
 
-This project is licensed under the MIT License.
