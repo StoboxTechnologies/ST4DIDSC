@@ -11,15 +11,6 @@ interface ISDID {
         address lastUpdatedBy; //=> required
     }
 
-    //TBD what functionality is prohibited when DID is BLOCKED. Maybe its better to update to have the proper info when unblock?
-    // - linkAddressToDID(writerOrDIDOwner) - YES
-    // - removeLinkedAddress(writer) - ???
-    // - deactivateAddressOfDID(writerOrDIDOwner) - ???
-    // - activateAddressOfDID(writerOrDIDOwner) - ???
-    // - addOrUpdateAttributes(writer) -???
-    // - deactivateDIDAttribute(writer) - ???
-    // - prolongateDID(writer) - ???
-    // -
     struct DID {
         string UDID; // unique number of DID from web2 data base
         uint256 validTo; // => ??? поки не знаємо що саме тут закладено
@@ -37,6 +28,32 @@ interface ISDID {
         uint256 updateDate; // on addToLinkredAddress & on deactivate => after deactivate join is NOT restricted
         bool deactivated; // default false
         address[] linkedAddresses; // +address of userWallet => linker add this address => DID object in mapping by uID
+    }
+
+    struct TempAttr {
+        string uDID;
+        string attributeName;
+        bytes32 value;
+        string valueType;
+        uint256 validToData;
+    }
+
+    struct TempLinkInfo {
+        uint256 joinDate;
+        uint256 updateDate;
+        bool deactivated;
+    }
+
+    struct TempFullDID {
+        string uDID;
+        uint256 validTo;
+        uint256 updatedAt;
+        bool blocked;
+        address lastUpdatedBy;
+        address[] linkedDIDAddresses;
+        TempLinkInfo[] linkedDIDAddressesInfo;
+        string[] attributeList;
+        Attribute[] fullAttributeData;
     }
 
     event DIDCreated(string indexed UDID, string UDID_, address indexed createdBy);
@@ -100,8 +117,11 @@ interface ISDID {
     );
 
     event AttributeListWasRead(string indexed UDID, string UDID_, address whoRead);
+    event LinkedAddressesListWasRead(string indexed UDID, string UDID_, address whoRead);
+    event FullDIDWasRead(string indexed UDID, string UDID_, address whoRead);
 
     error CantRevokeLastSuperAdmin();
+    error CantRemoveLastLinkedAddress();
     error DIDAlreadyExists(string UDID);
     error DIDDoesNotExist(string UDID);
     error ZeroAddressNotAllowed();

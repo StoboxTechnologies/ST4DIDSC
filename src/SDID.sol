@@ -6,7 +6,7 @@ import {ISDID} from "src/interfaces/ISDID.sol";
 
 contract SDID is ISDID, AccessControlEnumerable {
     bytes32 public constant WRITER_ROLE = keccak256("WRITER_ROLE");
-    bytes32 public constant ATTRIBUTE_READER_ROLE = keccak256("ATTRIBUTE_READER_ROLE"); // TODO USER CAN READ OWN DID
+    bytes32 public constant ATTRIBUTE_READER_ROLE = keccak256("ATTRIBUTE_READER_ROLE");
 
     uint256 public MAX_DID_LINKED_ADDRESSES = 10;
 
@@ -23,19 +23,23 @@ contract SDID is ISDID, AccessControlEnumerable {
         _;
     }
 
-    modifier didNotBlocked(string storage UDID) {
-        require(!userDID[UDID].blocked, DIDIsBlocked(UDID));
-        _;
-    }
-
     modifier canLinkToDID(address addrToLink) {
         require(addrToLink != address(0), ZeroAddressNotAllowed());
         require(_empty(linker[addrToLink].UDID), AddressAlreadyLinkedToDID(addrToLink, linker[addrToLink].UDID));
         _;
     }
 
-    modifier roleOrDIDOwner(bytes32 role, address referenceAddress) {
-        require(hasRole(role, msg.sender) || _didOwner(referenceAddress), NotAuthorizedForThisTransaction(msg.sender));
+    modifier writerOrDIDOwner(address referenceDIDAddress) {
+        require(
+            hasRole(WRITER_ROLE, msg.sender)
+                || (_equal(linker[referenceDIDAddress].UDID, linker[msg.sender].UDID) && !linker[msg.sender].deactivated),
+            NotAuthorizedForThisTransaction(msg.sender)
+        );
+        _;
+    }
+
+    modifier authorizedReader(string memory uDID) {
+        require(canRead(uDID, msg.sender), NotAuthorizedForThisTransaction(msg.sender));
         _;
     }
 
@@ -43,6 +47,7 @@ contract SDID is ISDID, AccessControlEnumerable {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
+    //TBD BATCH
     function createDID(string calldata uDID, address _userWallet, uint256 _validToDate, bool _blocked)
         external
         onlyRole(WRITER_ROLE)
@@ -71,13 +76,10 @@ contract SDID is ISDID, AccessControlEnumerable {
 
     function linkAddressToDID(address existingDIDAddress, address addressToLink)
         external
-        didNotBlocked(linker[existingDIDAddress].UDID)
+        hasDID(existingDIDAddress)
         canLinkToDID(addressToLink)
-        roleOrDIDOwner(WRITER_ROLE, existingDIDAddress)
+        writerOrDIDOwner(existingDIDAddress)
     {
-        require(
-            userDID[linker[existingDIDAddress].UDID].updatedAt != 0, DIDDoesNotExist(linker[existingDIDAddress].UDID)
-        );
         uint256 len = linker[existingDIDAddress].linkedAddresses.length;
         require(
             len < MAX_DID_LINKED_ADDRESSES,
@@ -105,37 +107,11 @@ contract SDID is ISDID, AccessControlEnumerable {
         _didUpdatedNow(userDID[newLink.UDID], msg.sender);
     }
 
-    function addOrUpdateAttributes(
-        string memory uDID,
-        string calldata attributeName,
-        bytes32 _value,
-        string calldata _valueType,
-        uint256 _validToData // if set zero - attribute does not expire (max.uint will be set by smart contract). Value "0" can be set ONLY by deactivateDIDAttribute()
-    ) external didExsists(uDID) onlyRole(WRITER_ROLE) {
-        Attribute storage attr = userDID[uDID].attributes[attributeName];
-
-        if (attr.createdAt == 0) {
-            attr.value = _value;
-            attr.valueType = _valueType;
-            attr.createdAt = block.timestamp;
-            attr.updatedAt = block.timestamp;
-            attr.validTo = _validTo(_validToData);
-            attr.lastUpdatedBy = msg.sender;
-
-            userDID[uDID].attributeList.push(attributeName);
-
-            emit AttributeCreated(uDID, uDID, attributeName, msg.sender);
-        } else {
-            attr.value = _value;
-            attr.valueType = _valueType;
-            attr.updatedAt = block.timestamp;
-            attr.validTo = _validTo(_validToData);
-            attr.lastUpdatedBy = msg.sender;
-
-            emit AttributeUpdated(uDID, uDID, attributeName, msg.sender);
+    function addOrUpdateAttributes(TempAttr[] memory attributesToAdd) external onlyRole(WRITER_ROLE) {
+        for (uint256 i = 0; i < attributesToAdd.length; i++) {
+            TempAttr memory attr = attributesToAdd[i];
+            _addOrUpdateAttributes(attr.uDID, attr.attributeName, attr.value, attr.valueType, attr.validToData);
         }
-
-        _didUpdatedNow(userDID[uDID], msg.sender);
     }
 
     function addOrUpdateExternalReader(string memory uDID, address addressToAddOrUpd, uint256 expirationDate)
@@ -167,6 +143,7 @@ contract SDID is ISDID, AccessControlEnumerable {
         return _deleteExternalReader(link.UDID, addressToDelete);
     }
 
+    //TBD BATCH
     function prolongateDID(string memory uDID, uint256 newValidTo)
         external
         didExsists(uDID)
@@ -182,6 +159,7 @@ contract SDID is ISDID, AccessControlEnumerable {
         return did.validTo;
     }
 
+    //TBD BATCH
     function blockDID(string memory uDID, string calldata reasonToBlock)
         external
         didExsists(uDID)
@@ -199,6 +177,7 @@ contract SDID is ISDID, AccessControlEnumerable {
         return true;
     }
 
+    //TBD BATCH
     function unBlockDID(string memory uDID, string calldata reasonToUnblock)
         external
         didExsists(uDID)
@@ -216,16 +195,16 @@ contract SDID is ISDID, AccessControlEnumerable {
         return true;
     }
 
-    //TBD if delete last address it'll be impossible to link address to DID only create the new one
     function removeLinkedAddress(address addressToDelete)
         external
         hasDID(addressToDelete)
         onlyRole(WRITER_ROLE)
         returns (bool)
     {
-        string storage did = linker[addressToDelete].UDID;
-
+        string memory did = linker[addressToDelete].UDID;
         uint256 len = linker[addressToDelete].linkedAddresses.length;
+        require(len > 1, CantRemoveLastLinkedAddress());
+
         for (uint256 i = 0; i < len; i++) {
             address la = linker[addressToDelete].linkedAddresses[i];
 
@@ -264,6 +243,7 @@ contract SDID is ISDID, AccessControlEnumerable {
         return true;
     }
 
+    //TBD BATCH
     function deactivateDIDAttribute(string memory uDID, string calldata attributeName)
         external
         didExsists(uDID)
@@ -278,7 +258,7 @@ contract SDID is ISDID, AccessControlEnumerable {
     function deactivateAddressOfDID(address addressToDeactivate)
         external
         hasDID(addressToDeactivate)
-        roleOrDIDOwner(WRITER_ROLE, addressToDeactivate)
+        writerOrDIDOwner(addressToDeactivate)
         returns (bool)
     {
         Linker storage link = linker[addressToDeactivate];
@@ -297,7 +277,7 @@ contract SDID is ISDID, AccessControlEnumerable {
     function activateAddressOfDID(address addressToActivate)
         external
         hasDID(addressToActivate)
-        roleOrDIDOwner(WRITER_ROLE, addressToActivate)
+        writerOrDIDOwner(addressToActivate)
         returns (bool)
     {
         Linker storage link = linker[addressToActivate];
@@ -321,17 +301,78 @@ contract SDID is ISDID, AccessControlEnumerable {
     function readAttributeList(address walletAddress)
         external
         hasDID(walletAddress)
-        onlyRole(ATTRIBUTE_READER_ROLE) //not only TODO
+        authorizedReader(linker[walletAddress].UDID)
         returns (string[] memory)
     {
-        //TBD do we need such event to have the history => write function will show warning if only read (it's not critical, can be)
         emit AttributeListWasRead(linker[walletAddress].UDID, linker[walletAddress].UDID, msg.sender);
         return userDID[linker[walletAddress].UDID].attributeList;
     }
 
-    //TBD do we have to revert if user doesn't have DID/Linker OR show zero-values without error?
-    function getUserDID(address walletAddress)
+    function readLinkedAddresses(address walletAddress)
         external
+        hasDID(walletAddress)
+        authorizedReader(linker[walletAddress].UDID)
+        returns (address[] memory)
+    {
+        emit LinkedAddressesListWasRead(linker[walletAddress].UDID, linker[walletAddress].UDID, msg.sender);
+        return linker[walletAddress].linkedAddresses;
+    }
+
+    function readFullDID(address didOwnerAddress)
+        external
+        hasDID(didOwnerAddress)
+        authorizedReader(linker[didOwnerAddress].UDID)
+        returns (TempFullDID memory)
+    {
+        Linker memory link = linker[didOwnerAddress];
+        DID storage did = userDID[link.UDID];
+
+        Attribute[] memory attr = new Attribute[](did.attributeList.length);
+        TempLinkInfo[] memory tli = new TempLinkInfo[](link.linkedAddresses.length);
+
+        for (uint256 i = 0; i < link.linkedAddresses.length; i++) {
+            (, uint256 joinDate, uint256 updateDate, bool deactivated) = getLinker(link.linkedAddresses[i]);
+
+            tli[i] = TempLinkInfo({joinDate: joinDate, updateDate: updateDate, deactivated: deactivated});
+        }
+
+        for (uint256 j = 0; j < did.attributeList.length; j++) {
+            (
+                bytes32 value,
+                string memory valueType,
+                uint256 createdAt,
+                uint256 updatedAt,
+                uint256 validTo,
+                address lastUpdatedBy
+            ) = getAttribute(didOwnerAddress, did.attributeList[j]);
+
+            attr[j] = Attribute({
+                value: value,
+                valueType: valueType,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                validTo: validTo,
+                lastUpdatedBy: lastUpdatedBy
+            });
+        }
+
+        emit FullDIDWasRead(link.UDID, link.UDID, msg.sender);
+
+        return TempFullDID({
+            uDID: link.UDID,
+            validTo: did.validTo,
+            updatedAt: did.updatedAt,
+            blocked: did.blocked,
+            lastUpdatedBy: did.lastUpdatedBy,
+            linkedDIDAddresses: link.linkedAddresses,
+            linkedDIDAddressesInfo: tli,
+            attributeList: did.attributeList,
+            fullAttributeData: attr
+        });
+    }
+
+    function getUserDID(address walletAddress)
+        public
         view
         hasDID(walletAddress)
         returns (string memory UDID, uint256 validTo, uint256 updatedAt, bool blocked, address lastUpdatedBy)
@@ -345,9 +386,8 @@ contract SDID is ISDID, AccessControlEnumerable {
         lastUpdatedBy = did.lastUpdatedBy;
     }
 
-    //TBD do we have to revert if user doesn't have DID/Linker OR show zero-values without error?
-    function getAttribute(address walletAddress, string calldata attributeName)
-        external
+    function getAttribute(address walletAddress, string memory attributeName)
+        public
         view
         hasDID(walletAddress)
         returns (
@@ -369,9 +409,8 @@ contract SDID is ISDID, AccessControlEnumerable {
         lastUpdatedBy = attr.lastUpdatedBy;
     }
 
-    //TBD do we have to revert if user doesn't have DID/Linker OR show zero-values without error?
     function getLinker(address walletAddress)
-        external
+        public
         view
         returns (string memory uDID, uint256 joinDate, uint256 updateDate, bool deactivated)
     {
@@ -384,37 +423,75 @@ contract SDID is ISDID, AccessControlEnumerable {
         deactivated = link.deactivated;
     }
 
+    function canRead(string memory uDIDToRead, address addressCanRead) public view returns (bool) {
+        return hasRole(ATTRIBUTE_READER_ROLE, addressCanRead)
+            || externalReaderExpirationDate(uDIDToRead, addressCanRead) > block.timestamp;
+    }
+
+    function externalReaderExpirationDate(string memory uDID, address walletAddress) public view returns (uint256) {
+        return userDID[uDID].externalReader[walletAddress];
+    }
+
     function _didUpdatedNow(DID storage did, address updater) internal {
         did.updatedAt = block.timestamp;
         did.lastUpdatedBy = updater;
     }
 
-    function _validTo(uint256 validTo) internal pure returns (uint256 toSet) {
-        toSet = validTo == 0 ? type(uint256).max : validTo;
+    function _addOrUpdateAttributes(
+        string memory uDID,
+        string memory attributeName,
+        bytes32 _value,
+        string memory _valueType,
+        uint256 _validToData // if set zero - attribute does not expire (max.uint will be set by smart contract). Value "0" can be set ONLY by deactivateDIDAttribute()
+    ) internal didExsists(uDID) {
+        Attribute storage attr = userDID[uDID].attributes[attributeName];
+
+        if (attr.createdAt == 0) {
+            attr.value = _value;
+            attr.valueType = _valueType;
+            attr.createdAt = block.timestamp;
+            attr.updatedAt = block.timestamp;
+            attr.validTo = _validTo(_validToData);
+            attr.lastUpdatedBy = msg.sender;
+
+            userDID[uDID].attributeList.push(attributeName);
+
+            emit AttributeCreated(uDID, uDID, attributeName, msg.sender);
+        } else {
+            attr.value = _value;
+            attr.valueType = _valueType;
+            attr.updatedAt = block.timestamp;
+            attr.validTo = _validTo(_validToData);
+            attr.lastUpdatedBy = msg.sender;
+
+            emit AttributeUpdated(uDID, uDID, attributeName, msg.sender);
+        }
+
+        _didUpdatedNow(userDID[uDID], msg.sender);
     }
 
-    // TBD if we want to set MAX expiration date instead of type(uint256).max? 1 year??? or mutable parameter
     function _addOrUpdExternalReader(string memory uDID, address addressToAddOrUpd, uint256 expirationDate)
         internal
         returns (bool)
     {
         require(addressToAddOrUpd != address(0), ZeroAddressNotAllowed());
 
-        if (userDID[uDID].externalReader[addressToAddOrUpd] == 0) {
+        if (externalReaderExpirationDate(uDID, addressToAddOrUpd) == 0) {
             emit NewExternalReaderAdded(uDID, uDID, addressToAddOrUpd, expirationDate, msg.sender);
         } else {
             emit ExternalReaderUdated(uDID, uDID, addressToAddOrUpd, expirationDate, msg.sender);
         }
 
-        userDID[uDID].externalReader[addressToAddOrUpd] =
-            expirationDate <= type(uint256).max ? expirationDate : type(uint256).max;
+        userDID[uDID].externalReader[addressToAddOrUpd] = _validTo(expirationDate);
 
         _didUpdatedNow(userDID[uDID], msg.sender);
         return true;
     }
 
     function _deleteExternalReader(string memory uDID, address addressToDelete) internal returns (bool) {
-        require(userDID[uDID].externalReader[addressToDelete] != 0, AddressIsNotExternalReader(uDID, addressToDelete));
+        require(
+            externalReaderExpirationDate(uDID, addressToDelete) != 0, AddressIsNotExternalReader(uDID, addressToDelete)
+        );
 
         delete userDID[uDID].externalReader[addressToDelete];
         emit ExternalReaderDeleted(uDID, uDID, addressToDelete, msg.sender);
@@ -430,25 +507,17 @@ contract SDID is ISDID, AccessControlEnumerable {
         revoked = super._revokeRole(role, account);
     }
 
-    function _didOwner(address referenceAddress) internal view returns (bool isOwner) {
-        isOwner = _equal(linker[msg.sender].UDID, linker[referenceAddress].UDID) && !linker[msg.sender].deactivated;
-    }
-
-    function _empty(string storage str) internal view returns (bool) {
-        return bytes(str).length == 0;
+    function _validTo(uint256 validTo) internal pure returns (uint256 toSet) {
+        toSet = validTo == 0 ? type(uint256).max : validTo;
     }
 
     function _equal(string memory a, string memory b) internal pure returns (bool) {
         return bytes(a).length == bytes(b).length && keccak256(bytes(a)) == keccak256(bytes(b));
     }
+
+    function _empty(string storage str) internal view returns (bool) {
+        return bytes(str).length == 0;
+    }
 }
 
-/**
- * TODO
- * function readFullDID(address didOwner) => DID, Attributes, listOfAddreses => ReaderRole, DIDOwner, ExternalReader (check if not expired)
- *    function readReaders(address didOwner) => ReaderRole, DIDOwner
- *
- *  .  function _readAttributeList(address user) external onlyAttributeReader returns (list of attributes)
- *  .  function readFullDID(address user) external onlyAttributeReader returns (full DID with attributes)
- *  .  function readLinkedAddress(address anyAddress of List) // multiKeyMapping
- */
+//TBD function readReaders(address didOwner) => ReaderRole, DIDOwner:  WE DONT HAVE LIST OF READERS
