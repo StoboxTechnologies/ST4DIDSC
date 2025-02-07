@@ -1,135 +1,136 @@
-# SDID Smart Contract
+# Stobox DID Contract
 
 ## Overview
-The **SDID** (Self-Sovereign Decentralized Identity) smart contract is an implementation of a decentralized identity (DID) system on the Ethereum blockchain. It enables users to create, manage, and interact with decentralized identities while providing mechanisms for attribute management, linked addresses, access control, and security.
+The **SDID** smart contract is an implementation of a decentralized identity (DID) system. It supports the creation, update, and revocation of various credentials. Compliance officers can introduce new attributes (e.g., “Accredited Investor”) or manage restrictions (e.g., “Blocked” status) on the fly, with changes automatically recognized by the STV3 contract and other integrated systems.
 
-## Features
-- **Decentralized Identity (DID) Management**
+## Documentation 
+A more detailed description of Stobox Decentralized ID can be found in the [Documentation](https://docs.stobox.io/products-and-services/stobox-did) 
+
+## Key features
+- **DID Management**
   - Create, update, and manage DIDs.
   - Link multiple addresses to a DID.
   - Control access to DID attributes.
+  - Deactivate and activate DIDs and linked addresses.
+  - Block and unblock DIDs.
   
 - **Attribute Management**
-  - Add, update, and deactivate attributes for a DID.
+  - Add and update attributes for a DID.
   - Set expiration dates for attributes.
+  - Deactivate attributes when no longer needed.
 
 - **Access Control**
-  - Define roles such as WRITER_ROLE and ATTRIBUTE_READER_ROLE.
-  - Assign external readers with expiration-based access.
+  - Roles for managing access:
+    - **DEFAULT_ADMIN_ROLE**: Full administrative control over the contract.
+    - **WRITER_ROLE**: Can create and manage DIDs and attributes.
+    - **ATTRIBUTE_READER_ROLE**: Can read attributes of a DID.
+  - Add and update external readers with expiration control.
+  - Grant read-only access to attributes for external readers.
+  - Remove external reader access when needed.
 
-- **Security Features**
-  - DID blocking and unblocking.
-  - Role-based access management.
+- **Linked Addresses**
   - Limit the number of linked addresses per DID.
+  - Link/unlink addresses to DIDs.
+  - Deactivate/activate linked addresses, tracking their status.
 
-## Smart Contract Details
-### Prerequisites
-- Solidity version: `0.8.26`
-- Uses OpenZeppelin's `AccessControlEnumerable` for role management.
-
-### Roles
-- **DEFAULT_ADMIN_ROLE**: Full administrative control over the contract.
-- **WRITER_ROLE**: Can create and manage DIDs and attributes.
-- **ATTRIBUTE_READER_ROLE**: Can read attributes of a DID.
-
-## Key Structures
-### `DID`
-Represents a decentralized identity.
-```solidity
-struct DID {
-    string UDID; // Unique identifier
-    uint256 validTo; // Expiry timestamp
-    uint256 updatedAt;
-    bool blocked;
-    address lastUpdatedBy;
-    string[] attributeList;
-    mapping(string => Attribute) attributes;
-    mapping(address => uint256) externalReader; // Access control
-}
-```
-
-### `Attribute`
-Represents an attribute associated with a DID.
-```solidity
-struct Attribute {
-    bytes32 value;
-    string valueType;
-    uint256 createdAt;
-    uint256 updatedAt;
-    uint256 validTo;
-    address lastUpdatedBy;
-}
-```
-
-### `Linker`
-Manages address linking to a DID.
-```solidity
-struct Linker {
-    string UDID;
-    uint256 joinDate;
-    uint256 updateDate;
-    bool deactivated;
-    address[] linkedAddresses;
-}
-```
+## Some Smart Contract Details
 
 ## Events
 The contract emits events for important actions, including:
+Here’s the list in the format you requested:
+	Here is the list of event names in Markdown format:
+
 - `DIDCreated`
 - `DIDAddressLinked`
 - `DIDAddressDeleted`
 - `DIDAddressDeactivated`
 - `DIDAddressActivated`
+- `DIDValidToDateUpdated`
+- `AttributeValidToDateUpdated`
 - `DIDBlockStatusUpdated`
 - `AttributeCreated`
 - `AttributeUpdated`
 - `AttributeDeactivated`
+- `UnexpectedBehavior`
 - `NewExternalReaderAdded`
+- `ExternalReaderUpdated`
 - `ExternalReaderDeleted`
+- `AttributeListWasRead`
+- `LinkedAddressesListWasRead`
+- `FullDIDWasRead`
 
 ## Functions
-### DID Management
-- `createDID(string calldata uDID, address _userWallet, uint256 _validToDate, bool _blocked)`: Creates a new DID.
-- `linkAddressToDID(address existingDIDAddress, address addressToLink)`: Links an address to an existing DID.
-- `blockDID(string memory uDID, string calldata reasonToBlock)`: Blocks a DID.
-- `unBlockDID(string memory uDID, string calldata reasonToUnblock)`: Unblocks a DID.
 
-### Attribute Management
-- `addOrUpdateAttributes(...)`: Adds or updates an attribute.
-- `deactivateDIDAttribute(string memory uDID, string calldata attributeName)`: Deactivates an attribute.
+### 1. DID Management
+- `createDID()`
+- `prolongateDID()`
+- `blockDID()`
+- `unBlockDID()`
 
-### Access Control
-- `addOrUpdateExternalReader(...)`: Grants external read access.
-- `deleteExternalReader(...)`: Revokes external read access.
+### 2. Attribute Management
+- `addOrUpdateAttributes()`
+- `deactivateDIDAttribute()`
 
-### Utility Functions
-- `prolongateDID(...)`: Extends the validity of a DID.
-- `readAttributeList(...)`: Reads the attribute list of a DID.
-- `getUserDID(...)`: Retrieves DID details.
-- `getAttribute(...)`: Fetches an attribute of a DID.
+### 3. ExternalReader Management
+- `addOrUpdateExternalReader()`
+- `deleteExternalReader()`
+- `externalReaderExpirationDate()`
+
+### 4. LinkedAddresses Management
+- `linkAddressToDID()`
+- `removeLinkedAddress()`
+- `deactivateAddressOfDID()`
+- `activateAddressOfDID()`
+- `setMAXDIDLinkedAddresses()`
+
+### 5. Data Access
+- `readAttributeList()`
+- `readLinkedAddresses()`
+- `readFullDID()`
+
+### 6. Read-Only Methods
+- `getUserDID()`
+- `getAttribute()`
+- `getLinker()`
+- `canRead()`
 
 ## Error Handling
 The contract includes custom errors for validation and security:
+- `CantRevokeLastSuperAdmin()`
+- `CantRemoveLastLinkedAddress()`
 - `DIDAlreadyExists(string UDID)`
 - `DIDDoesNotExist(string UDID)`
 - `ZeroAddressNotAllowed()`
-- `AddressAlreadyLinkedToDID(address, string)`
+- `AddressAlreadyLinkedToDID(address alreadyLinkedAddress, string uDIDLinked)`
+- `AddressDoesNotLinkedToDID(address notLinkedAddress)`
+- `AddressDoesNotHaveLinker(address addressWithoutLinker)`
+- `AddressAlreadyDeactivated(address alreadyDeactivatedAddress)`
+- `AddressAlreadyActivated(address alreadyActivatedAddress)`
 - `NotAuthorizedForThisTransaction(address caller)`
+- `ValidToDataMustBeInFuture(uint256 existingDateTimestamp)`
 - `DIDIsBlocked(string UDID)`
 - `DIDIsNotBlocked(string UDID)`
 - `MaxLinkedAddressesExceeded(string UDID, uint256 maxAllowed)`
-- `AddressIsNotExternalReader(string UDID, address)`
+- `AddressIsNotExternalReader(string UDID, address notReaderAddress)`
 
-## Deployment & Configuration
-1. Deploy the contract on an Ethereum-compatible blockchain.
-2. Assign `DEFAULT_ADMIN_ROLE` to the deploying address.
-3. Grant `WRITER_ROLE` to authorized entities.
-4. Configure `MAX_DID_LINKED_ADDRESSES` as required.
+## Repository structure
+and fair process.
 
-## Security Considerations
-- Ensure WRITER_ROLE is only granted to trusted entities.
-- Regularly audit access roles and external readers.
-- Be cautious when blocking/unblocking DIDs, as it may affect user operations.
+```
+/project-root
+│
+├── /src
+│   ├── /interfaces
+│   │   └── ISDID.sol
+│   └── SDID.sol
+│
+├── /script
+├── /test
+│
+├── remappings.txt
+├── .env.example
+└── foundry.toml
+```
 
 ## License
 This project is licensed under the **MIT License**.
