@@ -47,7 +47,6 @@ contract SDID is ISDID, AccessControlEnumerable {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    //TBD BATCH
     function createDID(string calldata uDID, address _userWallet, uint256 _validToDate, bool _blocked)
         external
         onlyRole(WRITER_ROLE)
@@ -143,7 +142,6 @@ contract SDID is ISDID, AccessControlEnumerable {
         return _deleteExternalReader(link.UDID, addressToDelete);
     }
 
-    //TBD BATCH
     function prolongateDID(string memory uDID, uint256 newValidTo)
         external
         didExsists(uDID)
@@ -159,7 +157,6 @@ contract SDID is ISDID, AccessControlEnumerable {
         return did.validTo;
     }
 
-    //TBD BATCH
     function blockDID(string memory uDID, string calldata reasonToBlock)
         external
         didExsists(uDID)
@@ -177,7 +174,6 @@ contract SDID is ISDID, AccessControlEnumerable {
         return true;
     }
 
-    //TBD BATCH
     function unBlockDID(string memory uDID, string calldata reasonToUnblock)
         external
         didExsists(uDID)
@@ -201,37 +197,23 @@ contract SDID is ISDID, AccessControlEnumerable {
         onlyRole(WRITER_ROLE)
         returns (bool)
     {
-        string memory did = linker[addressToDelete].UDID;
-        uint256 len = linker[addressToDelete].linkedAddresses.length;
+        Linker memory targetLinker = linker[addressToDelete];
+        string memory did = targetLinker.UDID;
+
+        uint256 len = targetLinker.linkedAddresses.length;
         require(len > 1, CantRemoveLastLinkedAddress());
 
         for (uint256 i = 0; i < len; i++) {
-            address la = linker[addressToDelete].linkedAddresses[i];
-
-            uint256 llen = linker[la].linkedAddresses.length;
-
-            for (uint256 j = 0; j < llen; j++) {
-                bool found = false;
-                address lla = linker[la].linkedAddresses[j];
-
-                linker[lla].updateDate = block.timestamp;
-
-                if (lla == addressToDelete) {
-                    linker[la].linkedAddresses[j] = linker[la].linkedAddresses[llen - 1];
-                    linker[la].linkedAddresses.pop();
-                    found = true;
-                    break;
-                }
-
-                if (!found) {
-                    emit UnexpectedBehavior(
-                        did,
-                        did,
-                        addressToDelete,
-                        "Address was not found in Linker of address",
-                        linker[la].linkedAddresses[j]
-                    );
-                }
+            address la = targetLinker.linkedAddresses[i];
+            Linker storage link = linker[la];
+            if (!_removeAddressFromLinkedAddresses(addressToDelete, link.linkedAddresses)) {
+                emit UnexpectedBehavior(
+                    did,
+                    did,
+                    addressToDelete,
+                    "Address was not found in Linker of address",
+                    targetLinker.linkedAddresses[i]
+                );
             }
         }
 
@@ -239,11 +221,20 @@ contract SDID is ISDID, AccessControlEnumerable {
         _didUpdatedNow(userDID[did], msg.sender);
 
         delete linker[addressToDelete];
-
         return true;
     }
 
-    //TBD BATCH
+    function _removeAddressFromLinkedAddresses(address target, address[] storage addresses) internal returns (bool) {
+        for (uint256 i = 0; i < addresses.length; i++) {
+            if (addresses[i] == target) {
+                addresses[i] = addresses[addresses.length - 1];
+                addresses.pop();
+                return true;
+            }
+        }
+        return false;
+    }
+
     function deactivateDIDAttribute(string memory uDID, string calldata attributeName)
         external
         didExsists(uDID)
@@ -519,5 +510,3 @@ contract SDID is ISDID, AccessControlEnumerable {
         return bytes(str).length == 0;
     }
 }
-
-//TBD function readReaders(address didOwner) => ReaderRole, DIDOwner:  WE DONT HAVE LIST OF READERS
