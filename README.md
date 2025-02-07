@@ -37,8 +37,6 @@ A more detailed description of Stobox Decentralized ID can be found in the [Docu
 
 ## Events
 The contract emits events for important actions, including:
-Here’s the list in the format you requested:
-	Here is the list of event names in Markdown format:
 
 - `DIDCreated`
 - `DIDAddressLinked`
@@ -114,8 +112,6 @@ The contract includes custom errors for validation and security:
 - `AddressIsNotExternalReader(string UDID, address notReaderAddress)`
 
 ## Repository structure
-and fair process.
-
 ```
 /project-root
 │
