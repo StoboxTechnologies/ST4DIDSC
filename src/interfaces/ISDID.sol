@@ -56,19 +56,44 @@ interface ISDID {
         Attribute[] fullAttributeData;
     }
 
-    event DIDCreated(string indexed UDID, string UDID_, address indexed createdBy);
-    event DIDAddressLinked(string indexed UDID, string UDID_, address indexed addedAddress, address indexed updatedBy);
+    // forgefmt: disable-start
+    event DIDCreated(
+        string indexed UDID, 
+        string UDID_, 
+        address indexed createdBy
+    );
+
+    event DIDAddressLinked(
+        string indexed UDID, 
+        string UDID_, 
+        address indexed addedAddress, 
+        address indexed updatedBy
+    );
+
     event DIDAddressDeleted(
-        string indexed UDID, string UDID_, address indexed deletedAddress, address indexed updatedBy
+        string indexed UDID, 
+        string UDID_, 
+        address indexed deletedAddress, 
+        address indexed updatedBy
     );
     event DIDAddressDeactivated(
-        string indexed UDID, string UDID_, address indexed deactivatedAddress, address indexed updatedBy
+        string indexed UDID, 
+        string UDID_, 
+        address indexed deactivatedAddress, 
+        address indexed updatedBy
     );
     event DIDAddressActivated(
-        string indexed UDID, string UDID_, address indexed activatedAddress, address indexed updatedBy
+        string indexed UDID, 
+        string UDID_, 
+        address indexed activatedAddress, 
+        address indexed updatedBy
     );
     event DIDValidToDateUpdated(
-        string indexed UDID, string UDID_, uint256 oldValidTo, uint256 indexed newValidTo, address indexed updatedBy
+        string indexed UDID, 
+        string UDID_, 
+        uint256 oldValidTo, 
+        uint256 indexed newValidTo, 
+        address indexed updatedBy
     );
     event AttributeValidToDateUpdated(
         string indexed UDID,
@@ -86,11 +111,27 @@ interface ISDID {
         string reasonDescription
     );
 
-    event AttributeCreated(string indexed UDID, string UDID_, string indexed attributeName, address indexed createdBy);
-    event AttributeUpdated(string indexed UDID, string UDID_, string indexed attributeName, address indexed updatedBy);
-    event AttributeDeactivated(
-        string indexed UDID, string UDID_, string indexed attributeName, address indexed deactivatedBy
+    event AttributeCreated(
+        string indexed UDID, 
+        string UDID_, 
+        string indexed attributeName, 
+        address indexed createdBy
     );
+
+    event AttributeUpdated(
+        string indexed UDID, 
+        string UDID_, 
+        string indexed attributeName, 
+        address indexed updatedBy
+    );
+
+    event AttributeDeactivated(
+        string indexed UDID, 
+        string UDID_, 
+        string indexed attributeName, 
+        address indexed deactivatedBy
+    );
+
     event UnexpectedBehavior(
         string indexed UDID,
         string UDID_,
@@ -113,12 +154,30 @@ interface ISDID {
         address indexed updatedBy
     );
     event ExternalReaderDeleted(
-        string indexed UDID, string UDID_, address indexed deletedExternalReader, address indexed updatedBy
+        string indexed UDID, 
+        string UDID_, 
+        address indexed deletedExternalReader, 
+        address indexed updatedBy
     );
 
-    event AttributeListWasRead(string indexed UDID, string UDID_, address whoRead);
-    event LinkedAddressesListWasRead(string indexed UDID, string UDID_, address whoRead);
-    event FullDIDWasRead(string indexed UDID, string UDID_, address whoRead);
+    event AttributeListWasRead(
+        string indexed UDID, 
+        string UDID_, 
+        address whoRead
+    );
+
+    event LinkedAddressesListWasRead(
+        string indexed UDID, 
+        string UDID_, 
+        address whoRead
+    );
+
+    event FullDIDWasRead(
+        string indexed UDID, 
+        string UDID_, 
+        address whoRead
+    );
+    // forgefmt: disable-end
 
     error CantRevokeLastSuperAdmin();
     error CantRemoveLastLinkedAddress();
