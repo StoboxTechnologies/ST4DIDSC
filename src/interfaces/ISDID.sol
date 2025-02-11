@@ -38,24 +38,6 @@ interface ISDID {
         uint256 validToData;
     }
 
-    struct ParamLinker {
-        uint256 joinDate;
-        uint256 updateDate;
-        bool deactivated;
-    }
-
-    struct ParamFullDID {
-        string uDID;
-        uint256 validTo;
-        uint256 updatedAt;
-        bool blocked;
-        address lastUpdatedBy;
-        address[] linkedDIDAddresses;
-        ParamLinker[] linkedDIDAddressesInfo;
-        string[] attributeList;
-        Attribute[] fullAttributeData;
-    }
-
     // forgefmt: disable-start
     event DIDCreated(
         string indexed UDID, 

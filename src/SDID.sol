@@ -302,53 +302,55 @@ contract SDID is ISDID, AccessControlEnumerable {
         external
         hasDID(didOwnerAddress)
         authorizedReader(linker[didOwnerAddress].UDID)
-        returns (ParamFullDID memory)
+        returns (
+            string memory uDID,
+            uint256 validTo,
+            uint256 updatedAt,
+            bool blocked,
+            address lastUpdatedBy,
+            address[] memory linkedDIDAddresses,
+            Linker[] memory linkedDIDAddressesParams,
+            string[] memory attributeList,
+            Attribute[] memory attributesParams
+        )
     {
         Linker memory link = linker[didOwnerAddress];
         DID storage did = userDID[link.UDID];
 
-        Attribute[] memory attr = new Attribute[](did.attributeList.length);
-        ParamLinker[] memory tli = new ParamLinker[](link.linkedAddresses.length);
+        uDID = link.UDID;
+        validTo = did.validTo;
+        updatedAt = did.updatedAt;
+        blocked = did.blocked;
+        lastUpdatedBy = did.lastUpdatedBy;
+        linkedDIDAddresses = link.linkedAddresses;
+        attributeList = did.attributeList;
 
-        for (uint256 i = 0; i < link.linkedAddresses.length; i++) {
-            (, uint256 joinDate, uint256 updateDate, bool deactivated) = getLinker(link.linkedAddresses[i]);
+        linkedDIDAddressesParams = new Linker[](linkedDIDAddresses.length);
 
-            tli[i] = ParamLinker({joinDate: joinDate, updateDate: updateDate, deactivated: deactivated});
+        for (uint256 i = 0; i < linkedDIDAddresses.length; i++) {
+            (string memory uDID_, uint256 joinDate_, uint256 updateDate_, bool deactivated_) =
+                getLinker(linkedDIDAddresses[i]);
+
+            linkedDIDAddressesParams[i] =
+                Linker(uDID_, joinDate_, updateDate_, deactivated_, linker[linkedDIDAddresses[i]].linkedAddresses);
         }
 
-        for (uint256 j = 0; j < did.attributeList.length; j++) {
+        attributesParams = new Attribute[](did.attributeList.length);
+
+        for (uint256 j = 0; j < attributeList.length; j++) {
             (
-                bytes32 value,
-                string memory valueType,
-                uint256 createdAt,
-                uint256 updatedAt,
-                uint256 validTo,
-                address lastUpdatedBy
-            ) = getAttribute(didOwnerAddress, did.attributeList[j]);
+                bytes32 value_,
+                string memory valueType_,
+                uint256 createdAt_,
+                uint256 updatedAt_,
+                uint256 validTo_,
+                address lastUpdatedBy_
+            ) = getAttribute(didOwnerAddress, attributeList[j]);
 
-            attr[j] = Attribute({
-                value: value,
-                valueType: valueType,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-                validTo: validTo,
-                lastUpdatedBy: lastUpdatedBy
-            });
+            attributesParams[j] = Attribute(value_, valueType_, createdAt_, updatedAt_, validTo_, lastUpdatedBy_);
         }
 
-        emit FullDIDWasRead(link.UDID, link.UDID, msg.sender);
-
-        return ParamFullDID({
-            uDID: link.UDID,
-            validTo: did.validTo,
-            updatedAt: did.updatedAt,
-            blocked: did.blocked,
-            lastUpdatedBy: did.lastUpdatedBy,
-            linkedDIDAddresses: link.linkedAddresses,
-            linkedDIDAddressesInfo: tli,
-            attributeList: did.attributeList,
-            fullAttributeData: attr
-        });
+        emit FullDIDWasRead(uDID, uDID, msg.sender);
     }
 
     function getUserDID(address walletAddress)
