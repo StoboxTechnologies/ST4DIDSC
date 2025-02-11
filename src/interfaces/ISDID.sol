@@ -4,33 +4,33 @@ pragma solidity 0.8.26;
 interface ISDID {
     struct Attribute {
         bytes32 value;
-        string valueType; // STRING, UINT, BOOL, HASH, ADDRESS, INT, FLOAT
+        string valueType;
         uint256 createdAt;
         uint256 updatedAt;
-        uint256 validTo; //=> may be zero(max uint)
-        address lastUpdatedBy; //=> required
+        uint256 validTo;
+        address lastUpdatedBy;
     }
 
     struct DID {
-        string UDID; // unique number of DID from web2 data base
-        uint256 validTo; // => ??? поки не знаємо що саме тут закладено
+        string UDID; // Unique Decentralised ID
+        uint256 validTo;
         uint256 updatedAt;
         bool blocked;
         address lastUpdatedBy;
         string[] attributeList;
         mapping(string => Attribute) attributes;
-        mapping(address => uint256 expirationData) externalReader; // can be blocked by set expirationData to zero!!! (or now.timestamp)
+        mapping(address => uint256 expirationData) externalReader;
     }
 
     struct Linker {
-        string UDID; // unique number of DID from web2 data base
-        uint256 joinDate; // function join() only once
-        uint256 updateDate; // on addToLinkredAddress & on deactivate => after deactivate join is NOT restricted
-        bool deactivated; // default false
-        address[] linkedAddresses; // +address of userWallet => linker add this address => DID object in mapping by uID
+        string UDID; // Unique Decentralised ID
+        uint256 joinDate;
+        uint256 updateDate;
+        bool deactivated;
+        address[] linkedAddresses;
     }
 
-    struct TempAttr {
+    struct ParamAttribute {
         string uDID;
         string attributeName;
         bytes32 value;
@@ -38,20 +38,20 @@ interface ISDID {
         uint256 validToData;
     }
 
-    struct TempLinkInfo {
+    struct ParamLinker {
         uint256 joinDate;
         uint256 updateDate;
         bool deactivated;
     }
 
-    struct TempFullDID {
+    struct ParamFullDID {
         string uDID;
         uint256 validTo;
         uint256 updatedAt;
         bool blocked;
         address lastUpdatedBy;
         address[] linkedDIDAddresses;
-        TempLinkInfo[] linkedDIDAddressesInfo;
+        ParamLinker[] linkedDIDAddressesInfo;
         string[] attributeList;
         Attribute[] fullAttributeData;
     }

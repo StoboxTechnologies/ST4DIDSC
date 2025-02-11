@@ -79,7 +79,7 @@ The contract emits events for important actions, including:
 - `removeLinkedAddress()`
 - `deactivateAddressOfDID()`
 - `activateAddressOfDID()`
-- `setMAXDIDLinkedAddresses()`
+- `setMaxDIDLinkedAddresses()`
 
 ### 5. Data Access
 - `readAttributeList()`

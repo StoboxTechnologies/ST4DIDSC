@@ -106,9 +106,9 @@ contract SDID is ISDID, AccessControlEnumerable {
         _didUpdatedNow(userDID[newLink.UDID], msg.sender);
     }
 
-    function addOrUpdateAttributes(TempAttr[] memory attributesToAdd) external onlyRole(WRITER_ROLE) {
+    function addOrUpdateAttributes(ParamAttribute[] memory attributesToAdd) external onlyRole(WRITER_ROLE) {
         for (uint256 i = 0; i < attributesToAdd.length; i++) {
-            TempAttr memory attr = attributesToAdd[i];
+            ParamAttribute memory attr = attributesToAdd[i];
             _addOrUpdateAttributes(attr.uDID, attr.attributeName, attr.value, attr.valueType, attr.validToData);
         }
     }
@@ -224,17 +224,6 @@ contract SDID is ISDID, AccessControlEnumerable {
         return true;
     }
 
-    function _removeAddressFromLinkedAddresses(address target, address[] storage addresses) internal returns (bool) {
-        for (uint256 i = 0; i < addresses.length; i++) {
-            if (addresses[i] == target) {
-                addresses[i] = addresses[addresses.length - 1];
-                addresses.pop();
-                return true;
-            }
-        }
-        return false;
-    }
-
     function deactivateDIDAttribute(string memory uDID, string calldata attributeName)
         external
         didExsists(uDID)
@@ -284,7 +273,7 @@ contract SDID is ISDID, AccessControlEnumerable {
         return true;
     }
 
-    function setMAXDIDLinkedAddresses(uint256 newMaxAllowed) external onlyRole(DEFAULT_ADMIN_ROLE) returns (uint256) {
+    function setMaxDIDLinkedAddresses(uint256 newMaxAllowed) external onlyRole(DEFAULT_ADMIN_ROLE) returns (uint256) {
         MAX_DID_LINKED_ADDRESSES = newMaxAllowed;
         return MAX_DID_LINKED_ADDRESSES;
     }
@@ -313,18 +302,18 @@ contract SDID is ISDID, AccessControlEnumerable {
         external
         hasDID(didOwnerAddress)
         authorizedReader(linker[didOwnerAddress].UDID)
-        returns (TempFullDID memory)
+        returns (ParamFullDID memory)
     {
         Linker memory link = linker[didOwnerAddress];
         DID storage did = userDID[link.UDID];
 
         Attribute[] memory attr = new Attribute[](did.attributeList.length);
-        TempLinkInfo[] memory tli = new TempLinkInfo[](link.linkedAddresses.length);
+        ParamLinker[] memory tli = new ParamLinker[](link.linkedAddresses.length);
 
         for (uint256 i = 0; i < link.linkedAddresses.length; i++) {
             (, uint256 joinDate, uint256 updateDate, bool deactivated) = getLinker(link.linkedAddresses[i]);
 
-            tli[i] = TempLinkInfo({joinDate: joinDate, updateDate: updateDate, deactivated: deactivated});
+            tli[i] = ParamLinker({joinDate: joinDate, updateDate: updateDate, deactivated: deactivated});
         }
 
         for (uint256 j = 0; j < did.attributeList.length; j++) {
@@ -349,7 +338,7 @@ contract SDID is ISDID, AccessControlEnumerable {
 
         emit FullDIDWasRead(link.UDID, link.UDID, msg.sender);
 
-        return TempFullDID({
+        return ParamFullDID({
             uDID: link.UDID,
             validTo: did.validTo,
             updatedAt: did.updatedAt,
@@ -489,6 +478,17 @@ contract SDID is ISDID, AccessControlEnumerable {
 
         _didUpdatedNow(userDID[uDID], msg.sender);
         return true;
+    }
+
+    function _removeAddressFromLinkedAddresses(address target, address[] storage addresses) internal returns (bool) {
+        for (uint256 i = 0; i < addresses.length; i++) {
+            if (addresses[i] == target) {
+                addresses[i] = addresses[addresses.length - 1];
+                addresses.pop();
+                return true;
+            }
+        }
+        return false;
     }
 
     function _revokeRole(bytes32 role, address account) internal override returns (bool revoked) {
