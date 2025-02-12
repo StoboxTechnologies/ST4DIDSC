@@ -113,6 +113,19 @@ contract SDID is ISDID, AccessControlEnumerable {
         }
     }
 
+    function addOrUpdateAttributes(bytes[] memory attributesToAdd) external onlyRole(WRITER_ROLE) {
+        for (uint256 i = 0; i < attributesToAdd.length; i++) {
+            (
+                string memory uDID_,
+                string memory attributeName_,
+                bytes32 value_,
+                string memory valueType_,
+                uint256 validToData_
+            ) = abi.decode(attributesToAdd[i], (string, string, bytes32, string, uint256));
+            _addOrUpdateAttributes(uDID_, attributeName_, value_, valueType_, validToData_);
+        }
+    }
+
     function addOrUpdateExternalReader(string memory uDID, address addressToAddOrUpd, uint256 expirationDate)
         external
         didExsists(uDID)
