@@ -3,7 +3,7 @@ pragma solidity 0.8.26;
 
 interface ISDID {
     struct Attribute {
-        bytes32 value;
+        bytes value;
         string valueType;
         uint256 createdAt;
         uint256 updatedAt;
@@ -31,9 +31,9 @@ interface ISDID {
     }
 
     struct ParamAttribute {
-        string uDID;
+        address walletAddress;
         string attributeName;
-        bytes32 value;
+        bytes value;
         string valueType;
         uint256 validToData;
     }
