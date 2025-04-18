@@ -109,20 +109,22 @@ contract SDID is ISDID, AccessControlEnumerable {
     function addOrUpdateAttributes(ParamAttribute[] memory attributesToAdd) external onlyRole(WRITER_ROLE) {
         for (uint256 i = 0; i < attributesToAdd.length; i++) {
             ParamAttribute memory attr = attributesToAdd[i];
-            _addOrUpdateAttributes(attr.uDID, attr.attributeName, attr.value, attr.valueType, attr.validToData);
+            _addOrUpdateAttributes(
+                linker[attr.walletAddress].UDID, attr.attributeName, attr.value, attr.valueType, attr.validToData
+            );
         }
     }
 
     function addOrUpdateAttributes(bytes[] memory attributesToAdd) external onlyRole(WRITER_ROLE) {
         for (uint256 i = 0; i < attributesToAdd.length; i++) {
             (
-                string memory uDID_,
+                address walletAddress_,
                 string memory attributeName_,
-                bytes32 value_,
+                bytes memory value_,
                 string memory valueType_,
                 uint256 validToData_
-            ) = abi.decode(attributesToAdd[i], (string, string, bytes32, string, uint256));
-            _addOrUpdateAttributes(uDID_, attributeName_, value_, valueType_, validToData_);
+            ) = abi.decode(attributesToAdd[i], (address, string, bytes, string, uint256));
+            _addOrUpdateAttributes(linker[walletAddress_].UDID, attributeName_, value_, valueType_, validToData_);
         }
     }
 
@@ -352,7 +354,7 @@ contract SDID is ISDID, AccessControlEnumerable {
 
         for (uint256 j = 0; j < attributeList.length; j++) {
             (
-                bytes32 value_,
+                bytes memory value_,
                 string memory valueType_,
                 uint256 createdAt_,
                 uint256 updatedAt_,
@@ -386,7 +388,7 @@ contract SDID is ISDID, AccessControlEnumerable {
         view
         hasDID(walletAddress)
         returns (
-            bytes32 value,
+            bytes memory value,
             string memory valueType,
             uint256 createdAt,
             uint256 updatedAt,
@@ -435,7 +437,7 @@ contract SDID is ISDID, AccessControlEnumerable {
     function _addOrUpdateAttributes(
         string memory uDID,
         string memory attributeName,
-        bytes32 _value,
+        bytes memory _value,
         string memory _valueType,
         uint256 _validToData // if set zero - attribute does not expire (max.uint will be set by smart contract). Value "0" can be set ONLY by deactivateDIDAttribute()
     ) internal didExsists(uDID) {

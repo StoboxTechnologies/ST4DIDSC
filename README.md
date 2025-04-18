@@ -2,7 +2,7 @@
 
 ### Arbitrum Sepolia
 
-**[SDID v0.1](https://sepolia.arbiscan.io/address/0x929380C1aCC0E4a06909326dD4Bca52D7Bea0851#code) 0x929380C1aCC0E4a06909326dD4Bca52D7Bea0851**
+**[SDID v0.1](https://sepolia.arbiscan.io/address/0xa832662d1e11f2a6cef706ce54a993e7eeedc440#code) 0xA832662d1E11F2a6cEF706cE54A993E7eeEDC440**
 
 ## Overview
 The **SDID** smart contract is an implementation of a decentralized identity (DID) system. It supports the creation, update, and revocation of various credentials. Compliance officers can introduce new attributes (e.g., “Accredited Investor”) or manage restrictions (e.g., “Blocked” status) on the fly, with changes automatically recognized by the STV3 contract and other integrated systems.
