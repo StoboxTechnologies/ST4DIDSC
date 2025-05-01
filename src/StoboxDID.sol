@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity 0.8.29;
 
 import {AccessControlEnumerable} from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 import {ISDID} from "src/interfaces/ISDID.sol";
 
-contract SDID is ISDID, AccessControlEnumerable {
+contract StoboxDID is ISDID, AccessControlEnumerable {
     bytes32 public constant WRITER_ROLE = keccak256("WRITER_ROLE");
     bytes32 public constant ATTRIBUTE_READER_ROLE = keccak256("ATTRIBUTE_READER_ROLE");
 
